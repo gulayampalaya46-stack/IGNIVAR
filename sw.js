@@ -1,5 +1,48 @@
-const CACHE_NAME='ignivar-ch1-v3';
-const ASSETS=["./", "./index.html", "./manifest.webmanifest", "./sw.js", "./icons/icon-192.png", "./icons/icon-512.png", "./assets/img_01.png", "./assets/img_02.png", "./assets/img_03.png", "./assets/img_04.png", "./assets/img_05.png", "./assets/img_06.png", "./assets/img_07.png", "./assets/img_08.jpg", "./assets/img_09.jpg", "./assets/img_10.jpg", "./assets/img_11.jpg", "./assets/img_12.jpg", "./assets/img_13.jpg", "./assets/img_14.jpg", "./assets/img_15.jpg", "./assets/img_16.jpg", "./assets/img_17.jpg", "./assets/img_18.jpg", "./assets/scene01_bedroom_generated.jpg"];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(resp=>{const copy=resp.clone();caches.open(CACHE_NAME).then(c=>c.put(e.request,copy));return resp;}).catch(()=>caches.match('./index.html')))));
+const CACHE_NAME = "ignivar-fast-v4";
+const SHELL = [
+  "./",
+  "./index.html",
+  "./manifest.webmanifest",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./backgrounds/bedroom.webp",
+  "./backgrounds/staircase.webp",
+  "./characters/shinro.webp"
+];
+
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(SHELL))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch", event => {
+  const request = event.request;
+  if (request.method !== "GET") return;
+
+  event.respondWith(
+    caches.match(request).then(cached => {
+      if (cached) return cached;
+
+      return fetch(request).then(response => {
+        if (response.ok && new URL(request.url).origin === self.location.origin) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+        }
+        return response;
+      }).catch(() => caches.match("./index.html"));
+    })
+  );
+});
